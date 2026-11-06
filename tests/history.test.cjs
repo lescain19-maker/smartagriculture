@@ -10,3 +10,12 @@ assert.equal(H.segments([{time:0,values:[5]},{time:5000,values:[6]},{time:25000,
 assert.throws(()=>H.append(samples,{time:1,values:[NaN,0,0,0]}));
 assert.match(H.csv([{time:0,values:[1,2,3,4],pump:true}]),/1970-01-01T00:00:00.000Z,1,2,3,4,1/);
 console.log('History retention, time windows, statistics, gaps, and CSV tests passed.');
+
+const optional=[];
+H.append(optional,{time:0,values:[40,null,25,60],pump:false});
+assert.equal(H.summarize(optional,1),null);
+assert.equal(H.summarize(optional,2).avg,25);
+assert.equal(H.segments(optional,1,0,1000,0,10).length,0);
+assert.match(H.csv(optional),/40,,25,60,0/);
+assert.equal(H.segments([{time:0,values:[1]},{time:1,values:[null]},{time:2,values:[3]}],0,0,10,0,5).length,2);
+console.log('Missing soil temperature stays empty in statistics, graphs and CSV.');

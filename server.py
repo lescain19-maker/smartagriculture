@@ -21,6 +21,9 @@ def validate_sample(data):
     values = []
     for field, (low, high) in zip(FIELDS, LIMITS):
         value = data.get(field)
+        if field == 'soil_temperature' and value is None:
+            values.append(None)
+            continue
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not low <= value <= high:
             raise ValueError(f'{field} must be a finite number from {low} to {high}')
         values.append(float(value))
@@ -42,7 +45,7 @@ class Store:
 
     def add(self, data):
         validate_sample(data)
-        sample = {k: data[k] for k in (*FIELDS, 'pump', 'pump_available', 'uptime_ms')}
+        sample = {k: data.get(k) for k in (*FIELDS, 'pump', 'pump_available', 'uptime_ms')}
         sample['time'] = int(time.time() * 1000)  # Server receive time, not sensor timestamp.
         with self.lock:
             self.db.execute('INSERT INTO readings(time,payload) VALUES (?,?)', (sample['time'], json.dumps(sample)))

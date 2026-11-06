@@ -46,6 +46,16 @@ class ServerTests(unittest.TestCase):
             with self.subTest(field=field):
                 self.assertEqual(self.req('/api/telemetry',{**SAMPLE,field:value})[0],400)
         self.assertEqual(len(self.store.history(60)),1)
+    def test_lora_packet_without_soil_temperature(self):
+        packet = {**SAMPLE, 'soil_temperature': None}
+        self.assertEqual(self.req('/api/telemetry',packet)[0],200)
+        latest = self.req('/api/status')[1]['sample']
+        self.assertIsNone(latest['soil_temperature'])
+        self.assertEqual(latest['air_temperature'],25)
+        del packet['soil_temperature']
+        self.assertEqual(self.req('/api/telemetry',packet)[0],200)
+        self.assertEqual(self.req('/api/telemetry',{**packet,'humidity':None})[0],400)
+
     def test_pump_requires_fresh_available_device(self):
         self.assertEqual(self.req('/api/pump',{'pump':True})[0],409)
         self.req('/api/telemetry',{**SAMPLE,'pump_available':False})

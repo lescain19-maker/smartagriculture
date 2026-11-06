@@ -11,7 +11,7 @@ function renderHistory(){
  document.getElementById('exportCsv').disabled=historySamples.length===0;
  chartSensors.forEach(([name,unit,color],i)=>{
   const stat=TelemetryHistory.summarize(samples,i);
-  if(!stat){document.getElementById('plot'+i).innerHTML='<div class="chart-empty">No readings in this time range.<br><small>Connect your ESP32 to collect telemetry.</small></div>';document.getElementById('stats'+i).innerHTML='<span>MIN <b>—</b></span><span>AVG <b>—</b></span><span>MAX <b>—</b></span>';return;}
+  if(!stat){document.getElementById('plot'+i).innerHTML='<div class="chart-empty">No measurement available in this time range.<br><small>Soil temperature is not included in T/H/S LoRa packets.</small></div>';document.getElementById('stats'+i).innerHTML='<span>MIN <b>—</b></span><span>AVG <b>—</b></span><span>MAX <b>—</b></span>';return;}
   const pad=Math.max((stat.max-stat.min)*.15,unit==='%'?2:1),low=stat.min-pad,high=stat.max+pad;
   const end=now,start=historyMinutes?now-historyMinutes*60000:Math.min(samples[0].time,now-60000);
   const segments=TelemetryHistory.segments(samples,i,start,end,low,high);
