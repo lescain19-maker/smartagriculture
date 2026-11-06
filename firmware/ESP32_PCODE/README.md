@@ -1,50 +1,31 @@
-# Your existing LoRa gateway + local connection
+# Your LoRa gateway — automatic local connection
 
-Keep all four code files together in this folder:
+Keep ESP32_PCODE.ino, LocalConnection.h, LocalConnection.cpp, and secrets.h together in this folder. Open ESP32_PCODE.ino and upload once; Arduino compiles all four files together.
 
-```
-ESP32_PCODE/
-  ESP32_PCODE.ino
-  LocalConnection.h
-  LocalConnection.cpp
-  secrets.h
-```
+## One-time setup
 
-Open **ESP32_PCODE.ino** in Arduino IDE. Arduino compiles the .cpp and includes the headers automatically; upload the sketch once, not each file separately.
+1. Install **LoRa by Sandeep Mistry**, **ArduinoJson 7**, and **WiFiManager by tzapu** (2.0.17 or newer) in Arduino IDE. ESPmDNS, WiFi, HTTPClient, and SPI come with Espressif's ESP32 board package.
+2. In secrets.h set LOCAL_DEVICE_KEY to your private key (at least 16 characters). Use the same key in start.bat and the dashboard. Keep LOCAL_SERVER_URL empty for automatic discovery.
+3. Upload ESP32_PCODE.ino once with your existing board and GPIO wiring. No radio sensor-node changes are required.
+4. Connect a phone/laptop to **SmartAgric-Setup**. The setup Wi-Fi password is **smartagricsetup** (WIFI_SETUP_PASSWORD in secrets.h).
+5. Open **http://192.168.4.1**, choose your home Wi-Fi, and enter its password. The ESP32 stores credentials in its own flash. Reconnect your phone/laptop to the home Wi-Fi afterward.
+6. Start **start.bat** on your computer. It installs its local mDNS dependency on first use, advertises the server, and opens the dashboard. Enter your unchanged private key.
+7. Serial Monitor at 115200 baud should show `Local server discovered: http://...`.
 
-## Changes made
+## When Wi-Fi or IP changes
 
-The uploaded sketch's LoRa pins, 433 MHz frequency, SPI setup, LEDs, packet parsing (`T:%f,H:%f,S:%d`), 50 ms delay, and `PUMP:1` / `PUMP:0` command strings are retained. Only the Blynk connection is replaced with local HTTP connection calls, and Wi-Fi values are moved into secrets.h. The callback gets its pump state from the local server instead of Blynk V5. LED_WIFI indicates recent server connectivity over Wi-Fi.
+- **Computer IP changes:** no upload or secrets.h edit. The gateway drops failed connections and discovers the server again. The server refreshes its advertised interfaces every five seconds. Restart start.bat if the network adapter/firewall has changed and discovery is blocked.
+- **New Wi-Fi name/password:** let the ESP32 try the saved network. On startup it opens SmartAgric-Setup if connection fails; after a later disconnection it opens the portal after about 30 seconds. Join that setup Wi-Fi, open 192.168.4.1, and enter the new network. Keep computer and ESP32 on the same LAN. No firmware upload needed.
+- The old WIFI_SSID/WIFI_PASSWORD macros are retained only for your existing sketch interface; WiFiManager manages the saved credentials.
 
-Your uploaded original is not overwritten. This is a connection-only adaptation, not a byte-identical copy of the original: some connection calls must change to remove Blynk. Your remote LoRa sensor node does not need a packet-format change.
+The computer advertises `_smartagric._tcp.local.` over mDNS. The gateway tests discovered servers with its device key before selecting one. No key/password is broadcast. Windows Firewall must allow Python on the private network, including UDP 5353 for mDNS and TCP 8000 for the server. Guest Wi-Fi, AP isolation, and some mobile hotspots block discovery. For networks that block multicast, LOCAL_SERVER_URL can hold an optional manual fallback URL; automatic discovery requires multicast support.
 
-## Fill secrets.h locally
+## What remains unchanged
 
-- WIFI_SSID / WIFI_PASSWORD: your Wi-Fi details.
-- LOCAL_SERVER_URL: your computer's LAN IP and port, e.g. http://192.168.1.100:8000.
-- LOCAL_DEVICE_KEY: the same private key entered in start.bat and the dashboard.
+Your ESP32_PCODE.ino is unchanged from the prior local-connection version: LoRa pins, 433 MHz frequency, SPI setup, LEDs, parser T:%f,H:%f,S:%d, 50 ms delay, and PUMP:1 / PUMP:0 commands are retained. This update changes connection helper files only.
 
-The committed secrets.h is a placeholder template, not your uploaded credentials. **Do not push your filled secrets.h to GitHub.** It is tracked as a template, so .gitignore does not hide edits to it.
+T is air temperature, H humidity, S soil moisture already expressed as percent. Soil temperature is unavailable and is sent as null. Values are not recalibrated/reinterpreted by this adapter. Telemetry is sent only for a new LoRa packet; no cached replay is used. HTTP and mDNS discovery can block the Arduino loop briefly, so this is not a lossless radio queue.
 
-## Upload
+Pump status is the gateway's command, not acknowledgment from the radio node. No new pump failsafe was added. Server/network loss cannot guarantee a remote pump switches off.
 
-1. Select your existing ESP32 board and USB port.
-2. Install **LoRa by Sandeep Mistry** and **ArduinoJson 7**. WiFi, HTTPClient, and SPI come with Espressif ESP32 board support. No Blynk library is needed.
-3. Fill secrets.h and upload ESP32_PCODE.ino.
-4. Run start.bat on your computer. Enter the same key and allow private-network access in the firewall.
-5. Connect in the dashboard using that key. Open Serial Monitor at 115200 baud for HTTP error codes (200 means accepted).
-
-## Exact telemetry mapping
-
-- T -> air_temperature (degrees C)
-- H -> humidity (percent)
-- S -> soil_moisture (percent; must already be 0-100 in the LoRa node)
-- soil_temperature -> null because your packet does not contain this measurement. The gauge/graph stays empty instead of inventing a reading.
-
-The adapter does not recalibrate or reinterpret your node's values. If S is raw ADC instead of a percentage, calibrate/convert it at the sensor node before sending it, or explicitly change the protocol later. The server rejects out-of-range sensor packets.
-
-Telemetry is sent only when a new valid LoRa packet is received; HTTP failures are logged and that packet is not retried. The dashboard marks telemetry stale after 15 seconds without accepted data. HTTP requests can briefly block the existing Arduino loop (up to configured timeouts); this is not a lossless radio queue.
-
-Pump state means the gateway's requested state, not confirmation from the remote LoRa node. No acknowledgment or new timeout logic has been added to your radio control code. Turning off the server does not guarantee the remote pump switches off. The existing server returns an off command when telemetry is stale, but the gateway must be connected to receive and forward it.
-
-Firmware must still be compiled and verified with your board and LoRa hardware.
+The committed secrets.h is a template. Do not push your filled credentials to GitHub; tracked template edits are not hidden by .gitignore. Firmware compilation, portal behavior, mDNS and LoRa still need testing with your actual hardware/router.

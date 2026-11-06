@@ -169,6 +169,12 @@ def main():
     server = ThreadingHTTPServer((args.host, args.port), handler_for(store, key))
     print(f'Smart Agric listening on http://{args.host}:{args.port}. Ctrl+C to stop.', flush=True)
     print('For ESP32 access use --host 0.0.0.0 and the computer’s LAN IPv4 address.', flush=True)
+    from discovery import DiscoveryAnnouncer
+    discovery = DiscoveryAnnouncer(server.server_port)
+    if args.host in ('0.0.0.0', ''):
+        discovery.start()
+    else:
+        print('LAN discovery is off for loopback-only binding. Use --host 0.0.0.0 for ESP32 access.', flush=True)
     browser_timer = None
     if args.open_browser:
         import webbrowser
@@ -187,6 +193,7 @@ def main():
     finally:
         if browser_timer:
             browser_timer.cancel()
+        discovery.stop()
         server.server_close()
         store.db.close()
 

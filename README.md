@@ -18,28 +18,29 @@ A ready-to-extract folder is also available in **[ESP32_PCODE_upload.zip](ESP32_
 
 The LoRa GPIOs, SPI configuration, 433 MHz frequency, LEDs, T/H/S parsing, 50 ms delay, and PUMP:1 / PUMP:0 radio commands are retained. Only Blynk connectivity is replaced and Wi-Fi credentials are moved to secrets.h. The uploaded original file is not overwritten.
 
-Install **LoRa by Sandeep Mistry** and **ArduinoJson 7**. WiFi, HTTPClient and SPI come with Espressif's ESP32 board package. No DHT, DS18B20, or Blynk libraries are needed for this gateway.
+Install **LoRa by Sandeep Mistry**, **ArduinoJson 7**, and **WiFiManager by tzapu (2.0.17+)**. WiFi, HTTPClient and SPI come with Espressif's ESP32 board package. No DHT, DS18B20, or Blynk libraries are needed for this gateway.
 
-### Fill secrets.h locally
+### One-time setup: no fixed computer IP
 
-```cpp
-#define WIFI_SSID "YOUR_WIFI_NAME"
-#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
-#define LOCAL_SERVER_URL "http://192.168.1.100:8000"
-#define LOCAL_DEVICE_KEY "YOUR_PRIVATE_KEY_AT_LEAST_16_CHARACTERS"
-```
+Set `LOCAL_DEVICE_KEY` in secrets.h to your private key (at least 16 characters). Leave `LOCAL_SERVER_URL` empty. Upload this discovery-enabled firmware **once**. Use the same key in start.bat and the dashboard. Do not push your filled secrets.h; it is tracked as a template.
 
-Use your computer's actual LAN IPv4 address. The ESP32 must not use localhost or 0.0.0.0. Use the same private key in secrets.h, start.bat, and the dashboard connection panel. The published secrets.h contains placeholders only; **do not push your filled secrets.h**. It is a tracked template, so .gitignore does not hide edits to it.
+Connect a phone to **SmartAgric-Setup**, password **smartagricsetup**, and open **http://192.168.4.1**. Choose your home Wi-Fi and enter its password. The gateway remembers it in ESP32 flash. Reconnect your phone to the home Wi-Fi afterward.
+
+**After computer IP changes:** the gateway finds the server automatically; no code edit or upload. The server advertises its current LAN addresses using mDNS (`_smartagric._tcp.local.`), refreshes addresses every five seconds, and the gateway rediscovers after connection failures.
+
+**After Wi-Fi name/password changes:** if the saved network is unavailable, use SmartAgric-Setup again to enter the new credentials. It starts after failed startup connection, or about 30 seconds after a later disconnection. No firmware upload needed. Both devices must be on the same LAN.
+
+The old WIFI_SSID/WIFI_PASSWORD macros are retained only for the existing sketch interface. WiFiManager handles saved credentials; a fixed server IP is no longer required. LOCAL_SERVER_URL can optionally be set as a manual fallback for networks that block multicast.
 
 ## Start the local server
 
 1. Install **Python 3.10+**, download the full repository ZIP, and extract it.
-2. Double-click **start.bat** on Windows. It checks for Python, asks for your key with hidden input, starts the server, and opens **http://localhost:8000**. The key is not saved. Leave the terminal open.
-3. If asked by Windows Firewall, allow Python on private networks. Keep the ESP32 and computer on the same LAN. Find the computer's IPv4 address with `ipconfig`; use that IP in secrets.h.
+2. Double-click **start.bat** on Windows. It checks for Python, installs the discovery library in a local .venv on first use (internet required once), asks for your key with hidden input, advertises the server automatically, and opens **http://localhost:8000**. The key is not saved. Leave the terminal open.
+3. If asked by Windows Firewall, allow Python on private networks. TCP 8000 and mDNS UDP 5353 must be available. Keep the ESP32 and computer on the same LAN; no IP editing is needed.
 4. Upload the gateway sketch and open Serial Monitor at **115200 baud**.
 5. In the dashboard, select **Connect ESP32** and enter the same device key. New LoRa packets will populate gauges and graphs. HTTP status 200 means a packet was accepted.
 
-For manual Windows PowerShell startup:
+For manual startup, first install discovery with `python -m pip install -r requirements.txt`. Then, in Windows PowerShell:
 
 ```powershell
 $env:ESP32_DEVICE_KEY = "YOUR_PRIVATE_KEY_AT_LEAST_16_CHARACTERS"
@@ -53,7 +54,7 @@ export ESP32_DEVICE_KEY='YOUR_PRIVATE_KEY_AT_LEAST_16_CHARACTERS'
 python3 server.py --host 0.0.0.0 --port 8000
 ```
 
-The server uses HTTP on a trusted LAN. Do not port-forward it to the internet. GitHub Pages cannot run the Python server; use its local URL. Reserve the computer's IP in the router if possible and prevent the computer from sleeping.
+The server uses HTTP on a trusted LAN. Do not port-forward it to the internet. GitHub Pages cannot run the Python server; use its local URL. Prevent the computer from sleeping. Guest Wi-Fi, AP isolation and some hotspots block mDNS; use a LAN that permits multicast or the optional manual URL fallback.
 
 ## What your LoRa packet supplies
 
@@ -87,10 +88,10 @@ The gateway has no acknowledgment from the remote node. The dashboard's pump sta
 | Symptom | Check |
 | --- | --- |
 | LoRa init failed | Original radio wiring, pins and module; these were not changed. |
-| Waiting for ESP32 | Radio node transmitting T/H/S format; gateway Wi-Fi; server IP and firewall. |
+| Waiting for ESP32 | Radio node transmitting T/H/S format; gateway Wi-Fi; start.bat running; same LAN and firewall. |
 | HTTP 401 | Identical device key in all three places. |
 | HTTP 400 | Sensor values within ranges; S must be a percentage. |
-| Negative HTTP code | Computer reachable, correct LAN IP, port 8000, server running, no guest-Wi-Fi isolation. |
+| Negative HTTP code | Computer reachable, discovery allowed (UDP 5353), port 8000, server running, no guest-Wi-Fi isolation. |
 | Soil-temperature gauge empty | Expected: your packet has no soil-temperature field. |
 | Strange values | Diagnose sensor/node conversion and calibration; values are forwarded unchanged. |
 
@@ -110,4 +111,4 @@ One gateway per server instance. Dashboard credentials remain in tab memory; tel
 
 ## Verification
 
-Run `python -m unittest discover -s tests` and `node tests/history.test.cjs`. Server ingestion and optional soil temperature, graph gaps, statistics, CSV, and command gating are covered. Actual ESP32 compilation, LoRa hardware and browser rendering must still be verified on your equipment.
+Run `python -m unittest discover -s tests` and `node tests/history.test.cjs`. Server ingestion and optional soil temperature, graph gaps, statistics, CSV, and command gating are covered. Actual ESP32 compilation, Wi-Fi portal, multicast discovery, LoRa hardware and browser rendering must still be verified on your equipment.

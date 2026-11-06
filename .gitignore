@@ -3,3 +3,5 @@ __pycache__/
 .work/
 firmware/SmartAgric/config.h
 .env
+
+.venv/

@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
-title Smart Agric - Local Dashboard
+title Smart Agric - Auto Connect Dashboard
 pushd "%~dp0"
 if errorlevel 1 goto folder_error
 
