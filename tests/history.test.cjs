@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');
+const H=require('../history.js');
+const samples=[];
+for(let n=0;n<730;n++)H.append(samples,{time:n*5000,values:[n,20,25,50],pump:false});
+assert.equal(samples.length,720);
+assert.equal(samples[0].time,50000);
+assert.equal(H.windowed(samples,1,729*5000).length,13);
+assert.deepEqual(H.summarize([{values:[10]},{values:[20]}],0),{min:10,max:20,avg:15});
+assert.equal(H.segments([{time:0,values:[5]},{time:5000,values:[6]},{time:25000,values:[7]}],0,0,30000,0,10).length,2);
+assert.throws(()=>H.append(samples,{time:1,values:[NaN,0,0,0]}));
+assert.match(H.csv([{time:0,values:[1,2,3,4],pump:true}]),/1970-01-01T00:00:00.000Z,1,2,3,4,1/);
+console.log('History retention, time windows, statistics, gaps, and CSV tests passed.');
