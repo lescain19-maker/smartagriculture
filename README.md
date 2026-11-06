@@ -13,7 +13,11 @@ Your ESP32 sends real sensor readings directly to a Python server on your comput
 
 ## 1. Start the server on your computer
 
-Install **Python 3.10+**, download/clone this repository, and open a terminal in its folder.
+Install **Python 3.10+**, download/clone this repository, and extract the complete folder.
+
+**Windows quick start:** double-click `start.bat`. It checks for Python, asks for your local device key with hidden input (or uses an existing `ESP32_DEVICE_KEY` environment variable), starts the server on port 8000, and opens the dashboard in your browser. Use the same key in your ESP32 `config.h` and in the dashboard connection panel. Leave the terminal window running; press Ctrl+C to stop. The launcher does not save your key, so enter it again next time. If Windows asks, allow Python on private networks.
+
+For manual startup, open a terminal in the repository folder and follow the commands below.
 
 Create your own random key of at least 16 characters. You can generate one with `python -c "import secrets; print(secrets.token_hex(24))"`. Keep it private and reuse the same value in the server, firmware, and dashboard.
 

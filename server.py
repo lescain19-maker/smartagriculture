@@ -155,6 +155,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--host', default='127.0.0.1')
     parser.add_argument('--port', type=int, default=8000)
+    parser.add_argument('--open-browser', action='store_true', help='Open the local dashboard after binding the server')
     args = parser.parse_args()
     key = os.environ.get('ESP32_DEVICE_KEY', '')
     if len(key) < 16:
@@ -165,11 +166,24 @@ def main():
     server = ThreadingHTTPServer((args.host, args.port), handler_for(store, key))
     print(f'Smart Agric listening on http://{args.host}:{args.port}. Ctrl+C to stop.', flush=True)
     print('For ESP32 access use --host 0.0.0.0 and the computer’s LAN IPv4 address.', flush=True)
+    browser_timer = None
+    if args.open_browser:
+        import webbrowser
+        def open_dashboard():
+            try:
+                webbrowser.open(f'http://localhost:{server.server_port}')
+            except Exception:
+                print('Open the dashboard URL manually in your browser.', flush=True)
+        browser_timer = threading.Timer(0.5, open_dashboard)
+        browser_timer.daemon = True
+        browser_timer.start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
+        if browser_timer:
+            browser_timer.cancel()
         server.server_close()
         store.db.close()
 
